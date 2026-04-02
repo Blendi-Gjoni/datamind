@@ -68,7 +68,7 @@ class PlannerAgent:
 
         raw = response.choices[0].messsage.content
 
-        return parse_and_validate(raw, schema)
+        return self.parse_and_validate(raw, schema)
 
     def build_user_message(self, question: str, schema: dict, metadata: dict) -> str:
         schema_str = json.dumps(schema, indent=2)

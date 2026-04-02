@@ -56,14 +56,3 @@ QUERY_TOOLS = {
     "pivot_table":     pivot_table,
     "date_resample":   date_resample,
 }
-
-
-
-
-
-
-
-
-
-
-
