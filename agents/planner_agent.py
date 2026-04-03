@@ -66,7 +66,7 @@ class PlannerAgent:
             response_format={"type": "json_object"},
         )
 
-        raw = response.choices[0].messsage.content
+        raw = response.choices[0].message.content
 
         return self.parse_and_validate(raw, schema)
 

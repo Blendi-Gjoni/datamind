@@ -46,7 +46,7 @@ class DataPipeline:
     def infer_types(self, df: pd.DataFrame):
         for col in df.columns:
             try:
-                df[col] = pd.to_datetime(df[col])
+                df[col] = pd.to_datetime(df[col], format="mixed")
                 continue
             except:
                 pass
