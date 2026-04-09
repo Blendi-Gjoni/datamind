@@ -1,3 +1,6 @@
 pandas
 openai
 plotly
+fastapi
+uvicorn
+python-multipart

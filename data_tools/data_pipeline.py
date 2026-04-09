@@ -7,7 +7,14 @@ class DataPipeline:
 
     def ingest_csv(self, csv_path: str = None, json_path: str = None):
         if csv_path is not None:
-            df = pd.read_csv(csv_path)
+            for encoding in ("utf-8", "utf-8-sig", "latin-1", "cp1252"):
+                try:
+                    df = pd.read_csv(csv_path, encoding=encoding)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                raise ValueError("Could not read CSV — unsupported file encoding.")
         elif json_path is not None:
             df = pd.read_json(json_path)
         else:
@@ -44,18 +51,21 @@ class DataPipeline:
         return df
 
     def infer_types(self, df: pd.DataFrame):
-        for col in df.columns:
-            try:
-                df[col] = pd.to_datetime(df[col], format="mixed")
-                continue
-            except:
-                pass
+        DATE_HINTS = ("date", "time", "timestamp", "created", "updated", "at")
 
+        for col in df.columns:
             try:
                 df[col] = pd.to_numeric(df[col])
                 continue
-            except:
+            except (ValueError, TypeError):
                 pass
+
+            if df[col].dtype == object and any(hint in col for hint in DATE_HINTS):
+                try:
+                    df[col] = pd.to_datetime(df[col], format="mixed")
+                    continue
+                except:
+                    pass
 
         return df
 
@@ -69,9 +79,12 @@ class DataPipeline:
         return df
 
     def feature_engineering(self, df: pd.DataFrame):
+        DATE_HINTS = ("date", "time", "timestamp", "created", "updated", "at")
+
         for col in df.select_dtypes(include="datetime").columns:
-            df[f"{col}_year"] = df[col].dt.year
-            df[f"{col}_month"] = df[col].dt.month
+            if any(hint in col for hint in DATE_HINTS):
+                df[f"{col}_year"] = df[col].dt.year
+                df[f"{col}_month"] = df[col].dt.month
 
         return df
 
