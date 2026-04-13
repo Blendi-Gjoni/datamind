@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataMind — AI Data Analyser</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #ffffff0f;
+    --border-hover: #ffffff1f;
+    --accent: #7c6dfa;
+    --accent2: #a78bfa;
+    --accent-glow: #7c6dfa22;
+    --text: #f0eeff;
+    --muted: #7a7a9a;
+    --success: #34d399;
+    --error: #f87171;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* Radial accent bg */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80vw;
+    height: 60vh;
+    background: radial-gradient(ellipse, #7c6dfa0a 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  header {
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .logo span { color: var(--accent2); }
+
+  .status-pill {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  /* --- Upload zone --- */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .upload-zone {
+    border: 1px dashed var(--border-hover);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .upload-zone:hover, .upload-zone.drag {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    width: 48px; height: 48px;
+    margin: 0 auto 1rem;
+    border: 1px solid var(--border-hover);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: var(--surface2);
+  }
+
+  .upload-zone h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .upload-zone p {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* --- Dataset pill --- */
+  .dataset-info {
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    animation: fadeUp 0.4s ease both;
+    margin-top: 1rem;
+  }
+
+  .dataset-info.visible { display: flex; }
+
+  .dataset-icon {
+    font-size: 1.4rem;
+    width: 40px; height: 40px;
+    background: var(--surface2);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .dataset-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .dataset-meta {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+  }
+
+  .dataset-id-badge {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--accent2);
+    background: var(--accent-glow);
+    border: 1px solid #7c6dfa33;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* --- Question input --- */
+  .question-section {
+    margin-top: 2.5rem;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .question-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1.2rem;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .question-input::placeholder { color: var(--muted); }
+  .question-input:focus { border-color: var(--accent); }
+
+  .analyse-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 0.9rem 1.6rem;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .analyse-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+  .analyse-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+  }
+
+  .suggestion-chip {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+  }
+
+  .suggestion-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  /* --- Results --- */
+  .results {
+    margin-top: 3rem;
+    display: none;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .results.visible { display: block; }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 1rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .card-header-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .chart-container {
+    padding: 1rem;
+    min-height: 400px;
+  }
+
+  .insight-body {
+    padding: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.75;
+    color: var(--text);
+  }
+
+  .insight-body p { opacity: 0.9; }
+
+  /* --- Steps timeline --- */
+  .steps-list {
+    padding: 1rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .step-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-row:last-child { border-bottom: none; }
+
+  .step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .step-name { color: var(--text); flex: 1; }
+  .step-time { color: var(--muted); }
+  .step-err { color: var(--error); font-size: 0.65rem; margin-top: 0.2rem; }
+
+  /* --- Loading state --- */
+  .loading-overlay {
+    display: none;
+    padding: 3rem;
+    text-align: center;
+  }
+
+  .loading-overlay.visible { display: block; }
+
+  .spinner {
+    width: 36px; height: 36px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  /* --- Error banner --- */
+  .error-banner {
+    display: none;
+    padding: 1rem 1.4rem;
+    background: #f8717111;
+    border: 1px solid #f8717133;
+    border-radius: 12px;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--error);
+    margin-top: 1rem;
+    animation: fadeUp 0.3s ease both;
+  }
+
+  .error-banner.visible { display: block; }
+
+  /* --- Animations --- */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Plotly override for dark theme */
+  .js-plotly-plot .plotly { background: transparent !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Data<span>Mind</span></div>
+  <div class="status-pill">
+    <span class="status-dot"></span>
+    api: localhost:8000
+  </div>
+</header>
+
+<main>
+
+  <!-- Upload -->
+  <div class="section-label">01 — Dataset</div>
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" accept=".csv" id="fileInput">
+    <div class="upload-icon">📂</div>
+    <h2>Drop your CSV here</h2>
+    <p>or click to browse — any CSV file up to 50MB</p>
+  </div>
+
+  <div class="dataset-info" id="datasetInfo">
+    <div class="dataset-icon">📊</div>
+    <div>
+      <div class="dataset-name" id="datasetName">—</div>
+      <div class="dataset-meta" id="datasetMeta">—</div>
+    </div>
+    <div class="dataset-id-badge" id="datasetIdBadge">—</div>
+  </div>
+
+  <div class="error-banner" id="uploadError"></div>
+
+  <!-- Question -->
+  <div class="question-section">
+    <div class="section-label">02 — Ask a question</div>
+    <div class="input-row">
+      <input
+        class="question-input"
+        id="questionInput"
+        type="text"
+        placeholder="What are the top 5 product categories by total sales?"
+      >
+      <button class="analyse-btn" id="analyseBtn" disabled>
+        <span>Analyse</span>
+        <span>→</span>
+      </button>
+    </div>
+    <div class="suggestions" id="suggestions">
+      <button class="suggestion-chip" onclick="setQuestion(this)">Top 5 categories by sales</button>
+      <button class="suggestion-chip" onclick="setQuestion(this)">Monthly revenue trend</button>
+      <button class="suggestion-chip" onclick="setQuestion(this)">Which region has the highest profit?</button>
+      <button class="suggestion-chip" onclick="setQuestion(this)">Best selling product</button>
+      <button class="suggestion-chip" onclick="setQuestion(this)">Sales distribution by deal size</button>
+    </div>
+  </div>
+
+  <div class="error-banner" id="analyseError"></div>
+
+  <!-- Loading -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Running pipeline...</div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="section-label" style="margin-bottom:1.5rem">03 — Results</div>
+    <div class="results-grid">
+
+      <div class="card" id="chartCard" style="display:none">
+        <div class="card-header">
+          <span class="card-header-dot" style="background:#7c6dfa"></span>
+          Visualization
+        </div>
+        <div class="chart-container" id="chartContainer"></div>
+      </div>
+
+      <div class="card" id="insightCard" style="display:none">
+        <div class="card-header">
+          <span class="card-header-dot" style="background:#34d399"></span>
+          Insight
+        </div>
+        <div class="insight-body" id="insightBody"></div>
+      </div>
+
+      <div class="card" id="stepsCard" style="display:none">
+        <div class="card-header">
+          <span class="card-header-dot" style="background:#f59e0b"></span>
+          Pipeline steps
+        </div>
+        <div class="steps-list" id="stepsList"></div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const API = 'http://127.0.0.1:8000';
+  let datasetId = null;
+
+  // --- Upload ---
+  const fileInput    = document.getElementById('fileInput');
+  const uploadZone   = document.getElementById('uploadZone');
+  const datasetInfo  = document.getElementById('datasetInfo');
+  const analyseBtn   = document.getElementById('analyseBtn');
+  const uploadError  = document.getElementById('uploadError');
+
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) handleUpload(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleUpload(fileInput.files[0]);
+  });
+
+  async function handleUpload(file) {
+    uploadError.className = 'error-banner';
+    uploadZone.querySelector('h2').textContent = 'Uploading...';
+
+    const form = new FormData();
+    form.append('file', file);
+
+    try {
+      const res  = await fetch(`${API}/upload`, { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.detail || 'Upload failed');
+
+      datasetId = data.dataset_id;
+
+      document.getElementById('datasetName').textContent = file.name;
+      document.getElementById('datasetMeta').textContent =
+        `${data.metadata.rows.toLocaleString()} rows · ${data.metadata.columns} columns · ${Object.keys(data.schema).length} fields`;
+      document.getElementById('datasetIdBadge').textContent = datasetId;
+      datasetInfo.className = 'dataset-info visible';
+      analyseBtn.disabled = false;
+      uploadZone.querySelector('h2').textContent = 'Drop another CSV to replace';
+
+    } catch (err) {
+      uploadZone.querySelector('h2').textContent = 'Drop your CSV here';
+      uploadError.textContent = err.message;
+      uploadError.className = 'error-banner visible';
+    }
+  }
+
+  // --- Question suggestions ---
+  function setQuestion(el) {
+    document.getElementById('questionInput').value = el.textContent;
+  }
+
+  // --- Analyse ---
+  const loadingMessages = [
+    'Fetching schema...',
+    'Planning query...',
+    'Running data transformations...',
+    'Building visualization...',
+    'Generating insight...',
+  ];
+
+  analyseBtn.addEventListener('click', runAnalysis);
+  document.getElementById('questionInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runAnalysis();
+  });
+
+  async function runAnalysis() {
+    const question = document.getElementById('questionInput').value.trim();
+    if (!question || !datasetId) return;
+
+    document.getElementById('analyseError').className = 'error-banner';
+    document.getElementById('results').className = 'results';
+    document.getElementById('loadingOverlay').className = 'loading-overlay visible';
+    analyseBtn.disabled = true;
+
+    // Cycle loading messages
+    let msgIdx = 0;
+    const loadingText = document.getElementById('loadingText');
+    const msgInterval = setInterval(() => {
+      loadingText.textContent = loadingMessages[msgIdx % loadingMessages.length];
+      msgIdx++;
+    }, 2000);
+
+    try {
+      const res  = await fetch(`${API}/analyse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataset_id: datasetId, question }),
+      });
+      const data = await res.json();
+
+      clearInterval(msgInterval);
+      document.getElementById('loadingOverlay').className = 'loading-overlay';
+      analyseBtn.disabled = false;
+
+      if (!res.ok || !data.success) {
+        const err = document.getElementById('analyseError');
+        err.textContent = data.error || data.detail || 'Analysis failed.';
+        err.className = 'error-banner visible';
+        renderSteps(data.steps || []);
+        document.getElementById('results').className = 'results visible';
+        return;
+      }
+
+      renderChart(data.chart);
+      renderInsight(data.insight);
+      renderSteps(data.steps);
+      document.getElementById('results').className = 'results visible';
+
+    } catch (err) {
+      clearInterval(msgInterval);
+      document.getElementById('loadingOverlay').className = 'loading-overlay';
+      analyseBtn.disabled = false;
+      const errEl = document.getElementById('analyseError');
+      errEl.textContent = 'Could not reach the API. Is the server running?';
+      errEl.className = 'error-banner visible';
+    }
+  }
+
+  function renderChart(chart) {
+    const card = document.getElementById('chartCard');
+    if (!chart) { card.style.display = 'none'; return; }
+
+    card.style.display = 'block';
+    const layout = {
+      ...chart.layout,
+      paper_bgcolor: 'transparent',
+      plot_bgcolor:  'transparent',
+      font:  { color: '#f0eeff', family: 'DM Mono, monospace' },
+      xaxis: { ...chart.layout?.xaxis, gridcolor: '#ffffff0f', zerolinecolor: '#ffffff15' },
+      yaxis: { ...chart.layout?.yaxis, gridcolor: '#ffffff0f', zerolinecolor: '#ffffff15' },
+      margin: { t: 40, b: 40, l: 50, r: 20 },
+    };
+    Plotly.react('chartContainer', chart.data, layout, { responsive: true, displayModeBar: false });
+  }
+
+  function renderInsight(insight) {
+    const card = document.getElementById('insightCard');
+    if (!insight) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    document.getElementById('insightBody').innerHTML = `<p>${insight}</p>`;
+  }
+
+  function renderSteps(steps) {
+    const card = document.getElementById('stepsCard');
+    if (!steps || !steps.length) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+
+    const list = document.getElementById('stepsList');
+    list.innerHTML = steps.map(s => `
+      <div class="step-row">
+        <span class="step-dot" style="background:${s.success ? '#34d399' : '#f87171'}"></span>
+        <span class="step-name">${s.name}</span>
+        <span class="step-time">${s.duration_ms}ms</span>
+        ${s.error ? `<div class="step-err">${s.error}</div>` : ''}
+      </div>
+    `).join('');
+  }
+</script>
+</body>
+</html>
