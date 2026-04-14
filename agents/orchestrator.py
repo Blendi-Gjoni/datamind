@@ -81,6 +81,11 @@ class Orchestrator:
             return result
         plan = step.output["plan"]
 
+        """
+        import json
+        print(json.dumps(plan, indent=2))
+        """
+
         #Fetch dataframe
         viz_cols = [plan["visualization"].get("x"), plan["visualization"].get("y"), plan["visualization"].get("color_by")]
         query_cols = self.extract_query_columns(plan["query"])
@@ -105,6 +110,7 @@ class Orchestrator:
         result.steps.append(step)
         if step.success:
             result.figure = step.output.get("figure")
+        """print(json.dumps(result.figure.to_json(), indent=2))"""
 
         #Insight
         step = self.run_step("insight", lambda: self.insight_agent.run(transformed_df, plan["insight"], question))

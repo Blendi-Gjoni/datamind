@@ -2,6 +2,7 @@ import os
 import json
 import tempfile
 from pathlib import Path
+import numpy as np
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -106,8 +107,22 @@ def analyse(req: AnalyseRequest):
 
     chart_dict = None
     if result.figure is not None:
-        chart_dict = result.figure.to_dict()
-        chart_dict = json.loads(json.dumps(chart_dict, default=str))
+        fig_dict = result.figure.to_dict()
+
+        for trace in fig_dict.get("data", []):
+            for key, value in trace.items():
+                if isinstance(value, np.ndarray):
+                    trace[key] = value.tolist()
+
+                elif isinstance(value, dict) and "bdata" in value and "dtype" in value:
+                    arr = np.frombuffer(
+                        __import__("base64").b64decode(value["bdata"]),
+                        dtype=np.dtype(value["dtype"])
+                    )
+                    trace[key] = arr.tolist()
+
+        chart_dict = json.loads(json.dumps(fig_dict))
+        """print(chart_dict)"""
 
     steps = [
         StepInfo(

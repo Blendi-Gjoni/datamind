@@ -45,6 +45,9 @@ Rules:
 - Only reference columns that exist in the schema.
 - If no transformation is needed, use an empty steps list: [].
 - If visualization is not meaningful, set chart_type to "none".
+- When the question filters to a single group (e.g. "in Electronics") and then aggregates, use filter_rows first, then aggregate WITHOUT group_by (empty list []) to get a single scalar result. Do NOT group_aggregate on the filtered column itself.
+- For top N questions, ALWAYS group_aggregate first, then top_n. Never apply top_n on raw unaggregated data.
+- For date_resample, always use "ME" for monthly, "YE" for yearly, "QE" for quarterly — never "M", "Y", or "Q".
 - Output ONLY the JSON object, no explanation, no markdown fences.
 """.strip()
 

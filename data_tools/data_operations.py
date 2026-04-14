@@ -18,6 +18,11 @@ def group_aggregate(df: pd.DataFrame, group_by: str, agg_column: str, agg_fn: st
     valid_fns = {"sum", "mean", "count", "min", "max"}
     if agg_fn not in valid_fns:
         raise ValueError(f"Unknown aggregate function '{agg_fn}'. Valid: {valid_fns}")
+    if pd.api.types.is_datetime64_any_dtype(df[agg_column]):
+        raise ValueError(f"Column '{agg_column}' is datetime and cannot be aggregated.")
+    if not group_by:
+        result = df[agg_column].agg(agg_fn)
+        return pd.DataFrame({agg_column: [result]})
     return df.groupby(group_by, as_index=False).agg({agg_column: agg_fn})
 
 def sort_rows(df: pd.DataFrame, column: str, ascending: bool = True) -> pd.DataFrame:
@@ -41,10 +46,11 @@ def pivot_table(df: pd.DataFrame, index: str, columns: str, values: str, agg_fn:
     return pd.pivot_table(df, index=index, columns=columns, values=values, agg_fn=agg_fn).reset_index()
 
 def date_resample(df: pd.DataFrame, date_column: str, freq: str, agg_column: str, agg_fn: str) -> pd.DataFrame:
+    freq_map = {"M": "ME", "Y": "YE", "Q": "QE"}
+    freq = freq_map.get(freq, freq)
     df = df.copy()
     df[date_column] = pd.to_datetime(df[date_column])
-    resampled = df.set_index(date_column).resample(freq)[agg_column].agg(agg_fn).reset_index()
-    return resampled
+    return df.set_index(date_column).resample(freq)[agg_column].agg(agg_fn).reset_index()
 
 QUERY_TOOLS = {
     "filter_rows":     filter_rows,

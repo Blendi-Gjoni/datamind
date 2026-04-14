@@ -656,16 +656,28 @@
     if (!chart) { card.style.display = 'none'; return; }
 
     card.style.display = 'block';
+
+    const colorPalette = ['#7c6dfa', '#34d399', '#f59e0b', '#f87171', '#a78bfa', '#38bdf8'];
+
+    const styledData = chart.data.map((trace, i) => ({
+        ...trace,
+        marker: { ...trace.marker, color: colorPalette[i % colorPalette.length], opacity: 1 },
+        line:   { ...trace.line,   color: colorPalette[i % colorPalette.length] },
+    }));
+
     const layout = {
-      ...chart.layout,
-      paper_bgcolor: 'transparent',
-      plot_bgcolor:  'transparent',
-      font:  { color: '#f0eeff', family: 'DM Mono, monospace' },
-      xaxis: { ...chart.layout?.xaxis, gridcolor: '#ffffff0f', zerolinecolor: '#ffffff15' },
-      yaxis: { ...chart.layout?.yaxis, gridcolor: '#ffffff0f', zerolinecolor: '#ffffff15' },
-      margin: { t: 40, b: 40, l: 50, r: 20 },
+        ...chart.layout,
+        paper_bgcolor: 'transparent',
+        plot_bgcolor:  'transparent',
+        font:   { color: '#f0eeff', family: 'DM Mono, monospace' },
+        xaxis:  { ...chart.layout?.xaxis, type: 'category', gridcolor: '#ffffff0f', zerolinecolor: '#ffffff15', color: '#7a7a9a' },
+        yaxis:  { ...chart.layout?.yaxis, gridcolor: '#ffffff0f', zerolinecolor: '#ffffff15', color: '#7a7a9a' },
+        margin: { t: 40, b: 60, l: 60, r: 20 },
+        colorway: colorPalette,
+        template: null,
     };
-    Plotly.react('chartContainer', chart.data, layout, { responsive: true, displayModeBar: false });
+
+    Plotly.react('chartContainer', styledData, layout, { responsive: true, displayModeBar: false });
   }
 
   function renderInsight(insight) {
