@@ -5,3 +5,4 @@ pandas
 pyarrow
 plotly
 python-multipart
+python-dotenv
