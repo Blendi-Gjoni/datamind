@@ -1,6 +1,7 @@
-pandas
-openai
-plotly
 fastapi
 uvicorn
+openai
+pandas
+pyarrow
+plotly
 python-multipart

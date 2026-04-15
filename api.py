@@ -6,6 +6,8 @@ import numpy as np
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from data_tools.data_pipeline import DataPipeline
@@ -56,9 +58,10 @@ class AnalyseResponse(BaseModel):
     steps: list[StepInfo]
     error: str | None = None
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+@app.get("/")
+def serve_ui():
+    return FileResponse("index.html")
+
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
