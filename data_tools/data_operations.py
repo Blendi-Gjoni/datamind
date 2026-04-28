@@ -35,7 +35,11 @@ def select_columns(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     return df[columns].copy()
 
 def top_n(df: pd.DataFrame, column: str, n: int, ascending: bool = True) -> pd.DataFrame:
-    return df.nlargest(n, column) if not ascending else df.nsmallest(n, column)
+    if ascending:
+        result = df.nsmallest(n, column)
+    else:
+        result = df.nlargest(n, column)
+    return result.sort_values(column, ascending=False).reset_index(drop=True)
 
 def value_counts(df: pd.DataFrame, column: str) -> pd.DataFrame:
     vc = df[column].value_counts().reset_index()
@@ -52,6 +56,9 @@ def date_resample(df: pd.DataFrame, date_column: str, freq: str, agg_column: str
     df[date_column] = pd.to_datetime(df[date_column])
     return df.set_index(date_column).resample(freq)[agg_column].agg(agg_fn).reset_index()
 
+def melt_columns(df: pd.DataFrame, id_cols: list, value_cols: list, var_name: str = "variable", value_name: str = "value") -> pd.DataFrame:
+    return df.melt(id_vars=id_cols, value_vars=value_cols, var_name=var_name, value_name=value_name)
+
 QUERY_TOOLS = {
     "filter_rows":     filter_rows,
     "group_aggregate": group_aggregate,
@@ -61,4 +68,5 @@ QUERY_TOOLS = {
     "value_counts":    value_counts,
     "pivot_table":     pivot_table,
     "date_resample":   date_resample,
+    "melt_columns": melt_columns,
 }

@@ -81,15 +81,22 @@ class Orchestrator:
             return result
         plan = step.output["plan"]
 
-        """
+
         import json
         print(json.dumps(plan, indent=2))
-        """
+
+
+        schema, _ = self.store.get_schema(dataset_id)
+        query_cols = self.extract_query_columns(plan["query"])
+        missing = [c for c in query_cols if c and c not in schema]
+        if missing:
+            result.error = f"Planner referenced columns not in dataset: {missing}"
+            return result
 
         #Fetch dataframe
         viz_cols = [plan["visualization"].get("x"), plan["visualization"].get("y"), plan["visualization"].get("color_by")]
         query_cols = self.extract_query_columns(plan["query"])
-        needed_cols = list({c for c in viz_cols + query_cols if c}) or None
+        needed_cols = list({c for c in viz_cols + query_cols if c and c in schema}) or None
         step = self.run_step("dataframe_fetch", lambda: self._fetch_df(dataset_id, needed_cols))
         result.steps.append(step)
         if not step.success:
@@ -110,7 +117,9 @@ class Orchestrator:
         result.steps.append(step)
         if step.success:
             result.figure = step.output.get("figure")
-        """print(json.dumps(result.figure.to_json(), indent=2))"""
+        print("viz step output:", step.output)
+        print("viz success:", step.success)
+        print("viz error:", step.error)
 
         #Insight
         step = self.run_step("insight", lambda: self.insight_agent.run(transformed_df, plan["insight"], question))
@@ -152,7 +161,7 @@ class Orchestrator:
             for key in ("column", "agg_column", "date_column", "index", "values"):
                 if val := params.get(key):
                     cols.append(val)
-            for key in ("group_by", "columns"):
+            for key in ("group_by", "columns", "id_cols", "value_cols"):
                 if val := params.get(key):
                     cols.extend(val if isinstance(val, list) else [val])
         return cols

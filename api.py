@@ -125,7 +125,7 @@ def analyse(req: AnalyseRequest):
                     trace[key] = arr.tolist()
 
         chart_dict = json.loads(json.dumps(fig_dict))
-        """print(chart_dict)"""
+        print(chart_dict)
 
     steps = [
         StepInfo(
